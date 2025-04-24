@@ -1,21 +1,27 @@
-import express from "express"; // ✅ default import
-import cors from "cors"; // ✅ import cors
+import express from "express";
+import cors from "cors";
 import router from "./routes/uploadRoute.js";
 
-const app = express(); // ✅ lowercase 'express()' is the function
-// ✅ enable CORS for requests from localhost:3000
+const app = express();
+
+// Enable CORS
 app.use(
   cors({
-    origin: "http://localhost:3000",
+    origin: ["http://localhost:3000", "https://slicevault.vercel.app"],
     credentials: true,
   })
 );
+
+// Basic test route
 app.get("/", (req, res) => {
-  res.send("Server is running");
+  res.send("Slice Backend is running");
 });
 
 app.use(router);
 
-app.listen(3001, () => {
-  console.log("Server is running on http://localhost:3001");
+// ✅ Use env PORT or fallback to 3002
+const PORT = process.env.PORT || 3002;
+
+app.listen(PORT, () => {
+  console.log(`Slice Backend running on http://localhost:${PORT}`);
 });

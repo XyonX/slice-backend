@@ -12,6 +12,9 @@ contract FileStorage {
 
     File[] public files;
 
+    mapping(address => uint[]) public uploadedFiles;
+    mapping(string => uint[]) public filesByTag;
+
     event FileUploaded(
         uint256 indexed fileId,
         string ipfsHash,
@@ -21,10 +24,20 @@ contract FileStorage {
         uint256 size
     );
 
-    function uploadFile(string memory _ipfsHash, string memory _description, uint256 _size) public {
-        File memory newFile = File(_ipfsHash, _description, block.timestamp, msg.sender, _size);
-        files.push(newFile);
-        emit FileUploaded(files.length - 1, _ipfsHash, _description, block.timestamp, msg.sender, _size);
+    function uploadFile(
+        string memory _ipfsHash,
+        string memory _description,
+        uint256 _size,
+        address _uploader,
+        string memory _tag
+    ) public {
+        uint256 fileId = files.length;
+        files.push(File(_ipfsHash, _description, block.timestamp, _uploader, _size));
+
+        uploadedFiles[_uploader].push(fileId);
+        filesByTag[_tag].push(fileId);
+
+        emit FileUploaded(fileId, _ipfsHash, _description, block.timestamp, _uploader, _size);
     }
 
     function getFile(uint256 fileId) public view returns (File memory) {
@@ -34,5 +47,13 @@ contract FileStorage {
 
     function getAllFiles() public view returns (File[] memory) {
         return files;
+    }
+
+    function getFilesByUploader(address uploader) public view returns (uint[] memory) {
+        return uploadedFiles[uploader];
+    }
+
+    function getFilesByTag(string memory tag) public view returns (uint[] memory) {
+        return filesByTag[tag];
     }
 }
