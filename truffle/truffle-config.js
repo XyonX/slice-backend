@@ -13,7 +13,7 @@ module.exports = {
       gas: 8000000,
       gasPrice: 1000000000,
       timeoutBlocks: 200,
-      networkCheckTimeout: 30000,
+      networkCheckTimeout: 60000,
     },
   },
   compilers: {

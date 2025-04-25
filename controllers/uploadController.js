@@ -5,11 +5,11 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { ethers } from "ethers";
 
-// derive __dirname in ESM‑style
+// Derive __dirname in ESM-style
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Load the JSON artifact manually instead of via import/assert
+// Load the JSON artifact manually
 const artifactPath = path.resolve(
   __dirname,
   "../truffle/build/contracts/FileStorage.json"
@@ -34,12 +34,15 @@ export const uploadFile = async (req, res) => {
     const { path: ipfsHash } = await ipfs.add(buffer);
     const fileSize = buffer.length;
     const description = req.body.description || "No description";
-    const userAddress = req.userId; // ensure this is coming from auth
+    const userAddress = req.body.userId; // Ensure this comes from auth
     const tag = req.body.tag || "default";
+    const fileName = req.file.originalname; // Extract the original file name from multer
 
     console.log("✅ IPFS upload successful:", ipfsHash);
 
-    // 2. Prepare on‑chain tx
+    console.log("Address", CONTRACT_ADDRESS);
+    console.log("Sender wallet:", userAddress);
+    // 2. Prepare on-chain transaction
     const provider = new ethers.JsonRpcProvider(PROVIDER_URL);
     const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
     const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, wallet);
@@ -47,6 +50,7 @@ export const uploadFile = async (req, res) => {
     console.log("⏳ Sending uploadFile() transaction...");
     const tx = await contract.uploadFile(
       ipfsHash,
+      fileName, // Pass the file name to the smart contract
       description,
       fileSize,
       userAddress,
@@ -73,7 +77,7 @@ export const uploadFile = async (req, res) => {
     if (parsedEvents.length) {
       const ev = parsedEvents[0];
       console.log("🎉 FileUploaded event args:", ev.args);
-      // ev.args.fileId, ev.args.ipfsHash, ev.args.description, etc.
+      // Includes fileId, ipfsHash, name, description, etc.
     } else {
       console.warn("⚠️ No FileUploaded event found in receipt");
     }
@@ -93,7 +97,7 @@ export const uploadFile = async (req, res) => {
 
 export const getAllFiles = async (_req, res) => {
   try {
-    // 1. Setup provider + contract (no signing needed for view funcs)
+    // 1. Setup provider + contract (no signing needed for view functions)
     const provider = new ethers.JsonRpcProvider(PROVIDER_URL);
     const contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, provider);
 
@@ -101,14 +105,14 @@ export const getAllFiles = async (_req, res) => {
     const rawFiles = await contract.getAllFiles();
 
     // 3. Convert BigInts & return
-    const files = rawFiles.map((f) => ({
-      fileId: Number(f.fileId), // Add if exists in struct
+    const files = rawFiles.map((f, index) => ({
+      fileId: index, // Use array index as fileId since it's not in the struct
       ipfsHash: f.ipfsHash,
+      name: f.name, // Include the new name field
       description: f.description,
       timestamp: Number(f.timestamp) * 1000,
       uploader: f.uploader,
       size: Number(f.size),
-      tag: f.tag, // Add if exists in struct
     }));
     res.json(files);
   } catch (err) {
